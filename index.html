@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guangzhou With You | 我们的惊喜旅行</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;500&family=Montserrat:wght@200;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-cream: #f9f6f2;
+            --accent-pink: #f2d5d5;
+            --text-grey: #4a4a4a;
+            --glass: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Montserrat', 'Noto Serif SC', serif;
+            background-color: var(--bg-cream);
+            color: var(--text-grey);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* 背景粒子层 */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #fffbf7 0%, #f4e8e8 100%);
+        }
+
+        /* 极简音乐控制 */
+        .music-ctrl {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            z-index: 1000;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--text-grey);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.5s ease;
+        }
+        .music-ctrl.playing { animation: rotate 4s linear infinite; }
+
+        section {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 50px 20px;
+            position: relative;
+        }
+
+        /* Section 1: Hero */
+        #hero h1 {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 200;
+            letter-spacing: 15px;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 1.5s forwards 0.5s;
+        }
+        #hero .subtitle {
+            font-size: 1.2rem;
+            letter-spacing: 5px;
+            height: 24px;
+        }
+        .scroll-indicator {
+            position: absolute;
+            bottom: 40px;
+            animation: bounce 2s infinite;
+            font-size: 24px;
+            font-weight: 100;
+        }
+
+        /* Section 2: Mood */
+        .mood-card {
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            padding: 80px 40px;
+            border-radius: 2px;
+            box-shadow: var(--shadow);
+            max-width: 800px;
+            text-align: center;
+            transition: transform 0.2s ease-out;
+        }
+        .mood-card p {
+            font-size: 2rem;
+            line-height: 2;
+            font-weight: 300;
+        }
+
+        /* Section 3: Wheel Interaction */
+        .wheel-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            margin-top: 50px;
+        }
+        #main-wheel {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            position: relative;
+            transition: transform 4s cubic-bezier(0.15, 0, 0.15, 1);
+            box-shadow: 0 0 50px rgba(0,0,0,0.05);
+            background: white;
+            overflow: hidden;
+        }
+        .wheel-pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            width: 0; height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 30px solid var(--text-grey);
+        }
+        .day-btns {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 20px;
+        }
+        .day-btn {
+            background: none;
+            border: 1px solid #ccc;
+            padding: 10px 25px;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+        .day-btn.active { background: var(--text-grey); color: white; border-color: var(--text-grey); }
+
+        /* Section 5: Food Magazine */
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            max-width: 1100px;
+            padding: 40px;
+        }
+        .food-item {
+            position: relative;
+            overflow: hidden;
+            aspect-ratio: 3/4;
+            cursor: crosshair;
+        }
+        .food-item:nth-child(even) { margin-top: 40px; }
+        .food-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: 1s ease;
+            filter: grayscale(0.3);
+        }
+        .food-item:hover img { transform: scale(1.1); filter: grayscale(0); }
+        .food-desc {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 20px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+            color: white;
+            opacity: 0;
+            transition: 0.5s;
+        }
+        .food-item:hover .food-desc { opacity: 1; }
+
+        /* Section 6: Emotional Interaction */
+        .letter-box {
+            width: 300px;
+            height: 200px;
+            background: #fff;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.5s;
+            position: relative;
+            box-shadow: var(--shadow);
+        }
+        .letter-content {
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: white;
+            padding: 50px;
+            z-index: 2000;
+            width: 80%; max-width: 500px;
+            display: none;
+            box-shadow: 0 0 100px rgba(0,0,0,0.2);
+            line-height: 2;
+        }
+
+        /* Section 7: Final */
+        #final {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #final h2 {
+            font-weight: 200;
+            font-size: 1.5rem;
+            letter-spacing: 8px;
+            opacity: 0;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% {transform: translateY(0);} 40% {transform: translateY(-10px);} 60% {transform: translateY(-5px);} }
+
+        .reveal { opacity: 0; transform: translateY(50px); transition: 1.5s all ease; }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+
+        /* Result Popup */
+        #result-display {
+            margin-top: 20px;
+            font-style: italic;
+            color: #888;
+            height: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container">
+        <canvas id="particleCanvas"></canvas>
+    </div>
+
+    <div class="music-ctrl" id="musicBtn">♫</div>
+
+    <section id="hero">
+        <h1>Guangzhou With You</h1>
+        <div class="subtitle" id="typewriter"></div>
+        <div class="scroll-indicator">↓</div>
+    </section>
+
+    <section id="mood">
+        <div class="mood-card reveal" id="parallax-card">
+            <p>“ 这不是一场旅行，<br>是我们一起的时间。”</p >
+        </div>
+    </section>
+
+    <section id="plan">
+        <h3 style="margin-bottom: 40px; letter-spacing: 5px; font-weight: 200;">我们的行程路线</h3>
+        <div class="day-btns">
+            <button class="day-btn active" onclick="updateWheel(1)">Day 1</button>
+            <button class="day-btn" onclick="updateWheel(2)">Day 2</button>
+            <button class="day-btn" onclick="updateWheel(3)">Day 3</button>
+        </div>
+        <div class="wheel-container">
+            <div class="wheel-pointer"></div>
+            <div id="main-wheel">
+                </div>
+        </div>
+        <button class="day-btn" style="margin-top:40px; border-color: #4a4a4a;" onclick="spinWheel()">点击旋转探索</button>
+        <div id="result-display"></div>
+    </section>
+
+    <section id="random">
+        <h3 style="margin-bottom: 20px; font-weight: 200;">今天，我们随缘去哪里？</h3>
+        <p style="color:#999; margin-bottom: 30px; font-size: 0.9rem;">(点击转盘触发随机地点)</p >
+        <div class="wheel-container" onclick="spinHuadu()" style="cursor: pointer; transform: scale(0.8);">
+            <div id="huadu-wheel" style="width:100%; height:100%; border-radius:50%; background: #fff; box-shadow: var(--shadow); border: 8px solid #fff; position: relative;">
+            </div>
+        </div>
+    </section>
+
+    <section id="food">
+        <h2 style="font-weight: 200; letter-spacing: 10px; margin-bottom: 50px;">CITY FLAVORS</h2>
+        <div class="food-grid">
+            <div class="food-item reveal">
+                < img src="https://images.unsplash.com/photo-1598514982205-f36b96d1e8d4?auto=format&fit=crop&q=80&w=600" alt="早茶">
+                <div class="food-desc"><h4>广式早茶</h4><p>在点心的热气中虚度早晨</p ></div>
+            </div>
+            <div class="food-item reveal">
+                < img src="https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?auto=format&fit=crop&q=80&w=600" alt="糖水">
+                <div class="food-desc"><h4>双皮奶/糖水</h4><p>生活里总要有一点温润的甜</p ></div>
+            </div>
+            <div class="food-item reveal">
+                < img src="https://images.unsplash.com/photo-1623341214825-9f4f963727da?auto=format&fit=crop&q=80&w=600" alt="烧鹅">
+                <div class="food-desc"><h4>深井烧鹅</h4><p>金红酥亮，是老城的烟火气</p ></div>
+            </div>
+            <div class="food-item reveal">
+                < img src="https://images.unsplash.com/photo-1520201163981-8cc95007dd2a?auto=format&fit=crop&q=80&w=600" alt="肠粉">
+                <div class="food-desc"><h4>石磨肠粉</h4><p>街头最纯粹的软糯与酱香</p ></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="emotional">
+        <div class="letter-box" onclick="openLetter()">
+            <span>写给你的一封信</span>
+        </div>
+        <div id="countdown" style="margin-top: 50px; font-weight: 200; letter-spacing: 3px;">
+            距离五一出发：<span id="days-count">00</span>天
+        </div>
+    </section>
+
+    <section id="final">
+        <h2 id="final-text">“这座城市不重要，重要的是你在我身边”</h2>
+    </section>
+
+    <div class="letter-content" id="letter">
+        <p>致 亲爱的：</p >
+        <p style="text-indent: 2em; margin: 20px 0;">这是特意为你设计的行程页面。愿我们在广州的每一次散步、每一次品尝美食，都能成为我们最珍贵的记忆。从花都的民宿到老城的街道，只要你在，哪里都是风景。</p >
+        <p style="text-align: right;">—— 你的旅伴</p >
+        <button onclick="closeLetter()" style="margin-top: 20px; background: none; border: 1px solid #ccc; cursor: pointer; padding: 5px 15px;">关闭</button>
+    </div>
+
+    <script>
+        /* --- 1. 背景粒子系统 --- */
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.speedX = Math.random() * 0.5 - 0.25;
+                this.speedY = Math.random() * 0.5 - 0.25;
+                this.opacity = Math.random() * 0.5;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if(this.x > canvas.width) this.x = 0;
+                if(this.x < 0) this.x = canvas.width;
+                if(this.y > canvas.height) this.y = 0;
+                if(this.y < 0) this.y = canvas.height;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(242, 213, 213, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for(let i=0; i<80; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0,0, canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        /* --- 2. 打字机效果 --- */
+        const text = "遇见广州，遇见你。";
+        let idx = 0;
+        function typeWriter() {
+            if (idx < text.length) {
+                document.getElementById("typewriter").innerHTML += text.charAt(idx);
+                idx++;
+                setTimeout(typeWriter, 150);
+            }
+        }
+        setTimeout(typeWriter, 2000);
+
+        /* --- 3. 视差效果 --- */
+        document.addEventListener('mousemove', (e) => {
+            const card = document.getElementById('parallax-card');
+            const x = (window.innerWidth / 2 - e.pageX) / 30;
+            const y = (window.innerHeight / 2 - e.pageY) / 30;
+            card.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+        });
+
+        /* --- 4. 行程转盘逻辑 --- */
+        const plans = {
+            1: ["民宿入住", "花都文创园", "融创茂小聚", "湖边散步", "小众书店"],
+            2: ["西关老街", "沙面拍照", "恩宁路咖啡", "珠江夜游", "陶陶居早茶"],
+            3: ["艺术馆看展", "二沙岛野餐", "东山口探店", "大剧院夜景", "顺德糖水"]
+        };
+        let currentDay = 1;
+
+        function updateWheel(day) {
+            currentDay = day;
+            const btns = document.querySelectorAll('.day-btn');
+            btns.forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            const wheel = document.getElementById('main-wheel');
+            wheel.innerHTML = '';
+            const items = plans[day];
+            items.forEach((text, i) => {
+                const div = document.createElement('div');
+                div.style.position = 'absolute';
+                div.style.width = '100%';
+                div.style.textAlign = 'center';
+                div.style.top = '50%';
+                div.style.transform = `rotate(${i * (360/items.length)}deg) translateY(-140px)`;
+                div.innerHTML = `<span style="background:#fff; padding:5px 10px; border-radius:10px; font-size:0.8rem;">${text}</span>`;
+                wheel.appendChild(div);
+            });
+            wheel.style.transform = 'rotate(0deg)';
+        }
+        updateWheel(1);
+
+        let currentRotation = 0;
+        function spinWheel() {
+            const wheel = document.getElementById('main-wheel');
+            const randomExtra = 1800 + Math.random() * 1000;
+            currentRotation += randomExtra;
+            wheel.style.transform = `rotate(${currentRotation}deg)`;
+            
+            document.getElementById('result-display').innerText = "正在为你挑选路线...";
+            setTimeout(() => {
+                document.getElementById('result-display').innerText = "这一站，注定是惊喜。";
+            }, 4000);
+        }
+
+        /* --- 5. 花都随缘转盘 --- */
+        const huaduSpots = ["悦庭民宿午后", "文创园写生", "红棉大道漫步", "花都湖骑行", "资政大夫祠"];
+        const hdWheel = document.getElementById('huadu-wheel');
+        huaduSpots.forEach((s, i) => {
+            const div = document.createElement('div');
+            div.style.position = 'absolute';
+            div.style.width = '100%';
+            div.style.top = '50%';
+            div.style.transform = `rotate(${i * (360/huaduSpots.length)}deg) translateY(-100px)`;
+            div.style.textAlign = 'center';
+            div.innerText = s;
+            hdWheel.appendChild(div);
+        });
+
+        function spinHuadu() {
+            if (window.navigator.vibrate) window.navigator.vibrate(50);
+            const extra = 2000 + Math.random() * 1000;
+            hdWheel.style.transition = 'transform 3s cubic-bezier(0.15, 0, 0.15, 1)';
+            hdWheel.style.transform = `rotate(${extra}deg)`;
+        }
+
+        /* --- 6. 倒计时 & 情感交互 --- */
+        function updateCountdown() {
+            const target = new Date('2026-05-01').getTime(); // 自动修正为2026年五一
+            const now = new Date().getTime();
+            const diff = target - now;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            document.getElementById('days-count').innerText = days > 0 ? days : "0";
+        }
+        updateCountdown();
+
+        function openLetter() {
+            document.getElementById('letter').style.display = 'block';
+            setTimeout(() => { document.getElementById('letter').style.transform = 'translate(-50%, -50%) scale(1)'; }, 10);
+        }
+        function closeLetter() {
+            document.getElementById('letter').style.display = 'none';
+        }
+
+        // 爱心爆炸效果
+        window.addEventListener('click', (e) => {
+            const heart = document.createElement('div');
+            heart.innerHTML = '❤';
+            heart.style.position = 'fixed';
+            heart.style.left = e.clientX + 'px';
+            heart.style.top = e.clientY + 'px';
+            heart.style.color = '#f2d5d5';
+            heart.style.pointerEvents = 'none';
+            heart.style.transition = 'all 1s ease-out';
+            heart.style.fontSize = '20px';
+            document.body.appendChild(heart);
+            setTimeout(() => {
+                heart.style.transform = `translate(${(Math.random()-0.5)*100}px, -100px)`;
+                heart.style.opacity = '0';
+            }, 10);
+            setTimeout(() => heart.remove(), 1000);
+        });
+
+        /* --- 7. 滚动触发 --- */
+        window.addEventListener('scroll', () => {
+            const reveals = document.querySelectorAll('.reveal');
+            reveals.forEach(r => {
+                if(r.getBoundingClientRect().top < window.innerHeight - 100) r.classList.add('active');
+            });
+            
+            const final = document.getElementById('final-text');
+            if(final.getBoundingClientRect().top < window.innerHeight - 100) {
+                final.style.animation = 'fadeInUp 2s forwards';
+            }
+        });
+
+        // 音乐模拟
+        const musicBtn = document.getElementById('musicBtn');
+        musicBtn.onclick = () => musicBtn.classList.toggle('playing');
+
+    </script>
+</body>
+</html>
